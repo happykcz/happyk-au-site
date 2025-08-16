@@ -123,6 +123,29 @@ const App: React.FC = () => {
           );
         }
 
+        // Fallbacks: inline script config or URL param for quick testing
+        if (!runtimeCfg?.clientId) {
+          try {
+            const inline = document.getElementById('app-config')?.textContent;
+            if (inline) {
+              const parsed = JSON.parse(inline);
+              if (parsed && parsed.clientId) {
+                runtimeCfg = { clientId: parsed.clientId, googleApiKey: parsed.googleApiKey };
+                setConfig(runtimeCfg);
+              }
+            }
+          } catch (e) {
+            // ignore
+          }
+        }
+        if (!runtimeCfg?.clientId) {
+          const fromQuery = new URLSearchParams(window.location.search).get('client_id');
+          if (fromQuery) {
+            runtimeCfg = { clientId: fromQuery };
+            setConfig(runtimeCfg);
+          }
+        }
+
         // 2) Load Google scripts
         const [gapi, google] = await Promise.all([
           waitForScript<any>('gapi'), 
@@ -140,7 +163,7 @@ const App: React.FC = () => {
         });
         
         if (!runtimeCfg?.clientId) {
-          throw new Error('Google Client ID is missing in config.json.');
+          throw new Error('Google Client ID is missing. Place it in config.json (clientId), inline #app-config, or pass ?client_id=...');
         }
 
         const client = google.accounts.oauth2.initTokenClient({

@@ -30,7 +30,8 @@ Prerequisites: Node.js 18+
 
 - Commit the built files in this folder (`index.html` and `assets/`).
 - Ensure `tools/index.html` links to `/tools/google-drive-photo-enhancer/index.html` (already done).
-- Place a `config.json` next to `index.html` on your site with your real Client ID.
+- Place a `config.json` next to `index.html` on your site with your real Client ID. Note: OAuth Client ID is not a secret and must be public for client-side OAuth to work.
+- This folder’s `.gitignore` excludes `config.json`. You can safely keep `config.json` untracked and upload it during deployment if you prefer.
 
 ### Google Cloud Console Setup (Summary)
 
@@ -52,6 +53,11 @@ Prerequisites: Node.js 18+
 - The code avoids bundling the Gemini SDK. If `geminiApiKey` is absent, AI features return mocked responses client-side (safe for public hosting).
 - If you add `geminiApiKey` to `config.json`, the SDK loads dynamically from a CDN at runtime (not bundled). This exposes the key to users; do this only for local testing.
 - For production AI, proxy requests through a server you control to keep the key secret.
+
+### Troubleshooting
+
+- Error: "Google Client ID is missing" — Ensure `config.json` is deployed next to `index.html` with a `clientId` value. Alternatively, embed inline config in `index.html` under a `<script id="app-config" type="application/json">` block or pass `?client_id=...` in the URL for quick testing.
+- Network tab should show `config.json` loading with 200 status at `/tools/google-drive-photo-enhancer/config.json`.
 
 ### Maintenance Tips
 
