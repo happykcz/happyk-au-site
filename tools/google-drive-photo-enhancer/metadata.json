@@ -1,5 +1,0 @@
-{
-  "name": "Google Drive Photo Enhancer",
-  "description": "An application to enhance photos from a Google Drive folder using AI. Users can log in, select a folder, view photos, and apply edits like cropping, resizing, and AI-powered improvements before saving them for web use.",
-  "requestFramePermissions": []
-}

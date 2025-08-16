@@ -59,10 +59,16 @@ const parseGoogleApiError = (err: any): string => {
     return 'An unknown and non-serializable error occurred. Check the developer console for the original error object.';
 };
 
+type AppConfig = {
+  clientId: string;
+  googleApiKey?: string;
+};
+
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [tokenClient, setTokenClient] = useState<any>(null);
   const [isGisLoaded, setIsGisLoaded] = useState(false);
+  const [config, setConfig] = useState<AppConfig | null>(null);
   
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
@@ -104,6 +110,19 @@ const App: React.FC = () => {
       };
       
       try {
+        // 1) Load runtime config
+        try {
+          const res = await fetch('./config.json', { cache: 'no-store' });
+          if (!res.ok) throw new Error('Missing config.json. Please create one (see README).');
+          const cfg = await res.json();
+          setConfig(cfg);
+        } catch (cfgErr) {
+          throw new Error(
+            (cfgErr as Error).message || 'Could not load config.json. Create it with your Google OAuth Client ID.'
+          );
+        }
+
+        // 2) Load Google scripts
         const [gapi, google] = await Promise.all([
           waitForScript<any>('gapi'), 
           waitForScript<any>('google')
@@ -112,33 +131,34 @@ const App: React.FC = () => {
         await new Promise<void>((resolve, reject) => gapi.load('client', { callback: resolve, onerror: reject }));
 
         await gapi.client.init({
-          apiKey: process.env.API_KEY,
+          // Optional: API key only needed for some unauthenticated calls; OAuth token is primary.
+          apiKey: config?.googleApiKey,
           discoveryDocs: [
-            'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
-            'https://www.googleapis.com/discovery/v1/apis/people/v1/rest'
+            'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'
           ],
         });
         
-        if (!process.env.CLIENT_ID) {
-            throw new Error('Google Client ID is missing. Please check your environment configuration.');
+        if (!config?.clientId) {
+          throw new Error('Google Client ID is missing in config.json.');
         }
 
         const client = google.accounts.oauth2.initTokenClient({
-          client_id: process.env.CLIENT_ID,
+          client_id: config.clientId,
           scope: 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email',
           callback: async (tokenResponse: any) => {
             if (tokenResponse && tokenResponse.access_token) {
               gapi.client.setToken(tokenResponse);
               try {
-                const profile = await gapi.client.people.people.get({
-                  resourceName: 'people/me',
-                  personFields: 'names,emailAddresses,photos',
+                // Use OpenID userinfo endpoint instead of People API to avoid extra API enablement.
+                const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                  headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
                 });
-                const { names, emailAddresses, photos } = profile.result;
+                if (!res.ok) throw new Error('Failed to fetch user profile');
+                const info = await res.json();
                 setUser({
-                  name: names?.[0]?.displayName || 'User',
-                  email: emailAddresses?.[0]?.value || '',
-                  avatarUrl: photos?.[0]?.url || `https://i.pravatar.cc/150?u=${emailAddresses?.[0]?.value}`,
+                  name: info.name || info.given_name || 'User',
+                  email: info.email || '',
+                  avatarUrl: info.picture || `https://i.pravatar.cc/150?u=${info.email || 'user'}`,
                 });
               } catch (err) {
                 console.error("Error fetching user profile", err);

@@ -6,7 +6,8 @@ export const listPhotosInFolder = async (folderId: string): Promise<Photo[]> => 
     try {
         const response = await gapi.client.drive.files.list({
             q: `'${folderId}' in parents and (mimeType='image/jpeg' or mimeType='image/png' or mimeType='image/gif' or mimeType='image/webp') and trashed=false`,
-            fields: 'files(id, name, description, webContentLink, imageMediaMetadata(width, height), size)',
+            // Use thumbnailLink for browser-friendly previews without requiring auth headers on <img>.
+            fields: 'files(id, name, description, thumbnailLink, webViewLink, imageMediaMetadata(width, height), size)',
             pageSize: 100 // a reasonable limit
         });
 
@@ -16,18 +17,23 @@ export const listPhotosInFolder = async (folderId: string): Promise<Photo[]> => 
 
         const photos: Photo[] = response.result.files
             .filter((file: any) => file.imageMediaMetadata) // Ensure it's an image with metadata
-            .map((file: any) => ({
-                id: file.id,
-                name: file.name,
-                description: file.description || '',
-                url: file.webContentLink.replace(/=s220$/, '=s1600'), // Request larger preview
-                width: file.imageMediaMetadata?.width || 0,
-                height: file.imageMediaMetadata?.height || 0,
-                fileSize: parseInt(file.size, 10),
-                author: '',
-                copyright: '',
-                adjustments: { brightness: 100, contrast: 100, saturation: 100 },
-        }));
+            .map((file: any) => {
+                const thumb = file.thumbnailLink || '';
+                // Increase thumbnail size if Drive provides a size suffix (e.g., =s220 or =s220-c)
+                const largeThumb = thumb ? thumb.replace(/=s\d+(-c)?$/, '=s1600') : '';
+                return {
+                    id: file.id,
+                    name: file.name,
+                    description: file.description || '',
+                    url: largeThumb || file.webViewLink, // Fallback to viewer link
+                    width: file.imageMediaMetadata?.width || 0,
+                    height: file.imageMediaMetadata?.height || 0,
+                    fileSize: parseInt(file.size, 10),
+                    author: '',
+                    copyright: '',
+                    adjustments: { brightness: 100, contrast: 100, saturation: 100 },
+                } as Photo;
+            });
         
         return photos;
     } catch (err: any) {
