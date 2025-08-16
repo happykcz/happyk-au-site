@@ -111,11 +111,12 @@ const App: React.FC = () => {
       
       try {
         // 1) Load runtime config
+        let runtimeCfg: AppConfig | null = null;
         try {
           const res = await fetch('./config.json', { cache: 'no-store' });
           if (!res.ok) throw new Error('Missing config.json. Please create one (see README).');
-          const cfg = await res.json();
-          setConfig(cfg);
+          runtimeCfg = await res.json();
+          setConfig(runtimeCfg);
         } catch (cfgErr) {
           throw new Error(
             (cfgErr as Error).message || 'Could not load config.json. Create it with your Google OAuth Client ID.'
@@ -132,18 +133,18 @@ const App: React.FC = () => {
 
         await gapi.client.init({
           // Optional: API key only needed for some unauthenticated calls; OAuth token is primary.
-          apiKey: config?.googleApiKey,
+          apiKey: runtimeCfg?.googleApiKey,
           discoveryDocs: [
             'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'
           ],
         });
         
-        if (!config?.clientId) {
+        if (!runtimeCfg?.clientId) {
           throw new Error('Google Client ID is missing in config.json.');
         }
 
         const client = google.accounts.oauth2.initTokenClient({
-          client_id: config.clientId,
+          client_id: runtimeCfg.clientId,
           scope: 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email',
           callback: async (tokenResponse: any) => {
             if (tokenResponse && tokenResponse.access_token) {
