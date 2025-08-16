@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="304.52252"
+   height="140.49477"
+   viewBox="0 0 304.52253 140.49476"
+   fill="none"
+   version="1.1"
+   id="svg5"
+   sodipodi:docname="lockup.svg"
+   inkscape:version="1.4.2 (ebf0e940d0, 2025-05-08)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview5"
+     pagecolor="#505050"
+     bordercolor="#ffffff"
+     borderopacity="1"
+     inkscape:showpageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="1"
+     inkscape:deskcolor="#505050"
+     showguides="true"
+     inkscape:zoom="3.3541667"
+     inkscape:cx="170.68323"
+     inkscape:cy="109.26708"
+     inkscape:window-width="2560"
+     inkscape:window-height="1368"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg5">
+    <sodipodi:guide
+       position="-4.7705737,202.66848"
+       orientation="1,0"
+       id="guide5"
+       inkscape:locked="false" />
+    <sodipodi:guide
+       position="37.018635,173.88432"
+       orientation="0,-1"
+       id="guide6"
+       inkscape:locked="false" />
+  </sodipodi:namedview>
+  <defs
+     id="defs1">
+    <style
+       id="style1">
+      .accent{fill:#d08f2e}
+      .fg{fill:#eaeaea}
+      .stroke{stroke:#d08f2e;stroke-width:8;stroke-linecap:round;stroke-linejoin:round;}
+    </style>
+  </defs>
+  <g
+     transform="translate(-16.608307,-0.0559006)"
+     id="g5">
+    <g
+       transform="matrix(1.5,0,0,1.5,4.608307,-8.9440994)"
+       id="g3">
+      <path
+         class="stroke"
+         d="m 22,10 h 12 c 10,0 18,8 18,18 0,10 -8,18 -18,18 H 22 C 16,46 12,42 12,36 V 20 c 0,-6 4,-10 10,-10 z"
+         id="path1" />
+      <path
+         class="stroke"
+         d="M 22,20 H 34"
+         id="path2" />
+      <path
+         class="stroke"
+         d="m 34,20 8,12 -8,12"
+         id="path3" />
+    </g>
+    <g
+       transform="translate(13.358307,126.89441)"
+       id="g4"
+       inkscape:label="g4">
+      <text
+         x="0"
+         y="0"
+         class="fg"
+         font-family="system-ui, '-apple-system', 'Segoe UI', Roboto, Ubuntu, Arial, sans-serif"
+         font-size="64px"
+         font-weight="700"
+         letter-spacing="0.5"
+         id="text3">happyk</text>
+      <text
+         x="222.39752"
+         y="0"
+         class="accent"
+         font-family="system-ui, '-apple-system', 'Segoe UI', Roboto, Ubuntu, Arial, sans-serif"
+         font-size="64px"
+         font-weight="700"
+         id="text4">.au</text>
+    </g>
+  </g>
+</svg>

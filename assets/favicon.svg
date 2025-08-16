@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .stroke{stroke:#d08f2e;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;}
+    </style>
+  </defs>
+  <path class="stroke" d="M22 10h12c10 0 18 8 18 18s-8 18-18 18H22c-6 0-10-4-10-10V20c0-6 4-10 10-10z"/>
+  <path class="stroke" d="M22 20h12"/>
+  <path class="stroke" d="M34 20l8 12l-8 12"/>
+</svg>
