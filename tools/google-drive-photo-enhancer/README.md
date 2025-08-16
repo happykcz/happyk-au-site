@@ -10,11 +10,12 @@ Prerequisites: Node.js 18+
 - `npm install`
 
 2) Create a runtime config
-- Copy `config.sample.json` to `config.json` and set your Google OAuth Client ID (you can leave `googleApiKey` empty):
+- Copy `config.sample.json` to `config.json` and set your Google OAuth Client ID (you can leave `googleApiKey` empty). Optional: for local testing only, you may set `geminiApiKey` (not recommended for production as it exposes a secret):
 ```
 {
   "clientId": "YOUR_GOOGLE_OAUTH_CLIENT_ID.apps.googleusercontent.com",
-  "googleApiKey": ""
+  "googleApiKey": "",
+  "geminiApiKey": ""
 }
 ```
 
@@ -48,8 +49,9 @@ Prerequisites: Node.js 18+
 
 ### Notes on AI/Gemini
 
-- The code intentionally does not ship a Gemini API key to the browser. If `config.json` does not include Gemini settings, the app uses mocked AI responses client-side, which is safe for public hosting.
-- For real AI calls, proxy them through a server you control, or a Cloud Function, to keep secrets safe.
+- The code avoids bundling the Gemini SDK. If `geminiApiKey` is absent, AI features return mocked responses client-side (safe for public hosting).
+- If you add `geminiApiKey` to `config.json`, the SDK loads dynamically from a CDN at runtime (not bundled). This exposes the key to users; do this only for local testing.
+- For production AI, proxy requests through a server you control to keep the key secret.
 
 ### Maintenance Tips
 

@@ -19,11 +19,11 @@ export default defineConfig(({ mode }) => {
         '@': path.resolve(__dirname, '.'),
       }
     },
-    // Emit build artifacts directly into this folder so GitHub Pages can serve them.
+    // Build to a temp dir; a postbuild step will copy to this folder.
     build: {
-      outDir: '.',
+      outDir: 'dist',
       assetsDir: 'assets',
-      emptyOutDir: false,
+      emptyOutDir: true,
     }
   };
 });

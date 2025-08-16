@@ -1,7 +1,29 @@
-import { GoogleGenAI, Type } from "@google/genai";
 import { AIEnhancementSuggestion, Photo } from '../types';
 
-const MOCK_DELAY = 1000;
+const MOCK_DELAY = 600;
+
+// Minimal runtime config loader (cached)
+let runtimeConfig: { geminiApiKey?: string } | null | undefined;
+async function getRuntimeConfig(): Promise<{ geminiApiKey?: string } | null> {
+  if (runtimeConfig !== undefined) return runtimeConfig ?? null;
+  try {
+    const res = await fetch('./config.json', { cache: 'no-store' });
+    runtimeConfig = res.ok ? await res.json() : null;
+  } catch {
+    runtimeConfig = null;
+  }
+  return runtimeConfig;
+}
+
+// Lazy-load Gemini SDK only when a key exists; use CDN to avoid bundling
+async function getGeminiClient(): Promise<any | null> {
+  const cfg = await getRuntimeConfig();
+  const key = cfg?.geminiApiKey || (window as any)?.GEMINI_API_KEY;
+  if (!key) return null;
+  const mod = await import('https://esm.sh/@google/genai@1.13.0');
+  const client = new (mod as any).GoogleGenAI({ apiKey: key });
+  return { mod, client };
+}
 
 // New type for adjustments
 type AIAdjustmentSuggestion = {
@@ -11,38 +33,24 @@ type AIAdjustmentSuggestion = {
 
 // 1. Auto Enhance Picture
 export const getAIAutoAdjustments = async (photoName: string): Promise<AIAdjustmentSuggestion> => {
-  if (!process.env.API_KEY) {
-    console.warn("API_KEY not set. Returning mock enhancement data.");
+  const gem = await getGeminiClient();
+  if (!gem) {
     return new Promise(resolve => setTimeout(() => resolve({
       adjustments: { brightness: 115, contrast: 120, saturation: 125 },
-      enhancementNotes: "Automatically adjusted for a more vibrant and balanced look, increasing contrast and saturation slightly."
+      enhancementNotes: 'Mock: Increased vibrance and balance for web display.'
     }), MOCK_DELAY));
   }
 
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const textPart = {
-    text: `Analyze the context of a photo named "${photoName}". Suggest optimal adjustments for brightness, contrast, and saturation. Return values between 0 and 200, where 100 is no change. The goal is a balanced, professional, and vibrant image. Provide brief notes on your choices.`
+  const { client } = gem;
+  const prompt = {
+    text: `Return JSON with keys brightness, contrast, saturation (0-200, 100 no change) and enhancementNotes for photo "${photoName}".`
   };
-  
-  const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
-    contents: { parts: [textPart] },
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          brightness: { type: Type.INTEGER, description: "Value between 0-200 for brightness." },
-          contrast: { type: Type.INTEGER, description: "Value between 0-200 for contrast." },
-          saturation: { type: Type.INTEGER, description: "Value between 0-200 for saturation." },
-          enhancementNotes: { type: Type.STRING, description: "Brief summary of the adjustment choices." }
-        },
-        required: ["brightness", "contrast", "saturation", "enhancementNotes"]
-      }
-    }
+  const response = await client.models.generateContent({
+    model: 'gemini-2.5-flash',
+    contents: { parts: [prompt] },
+    config: { responseMimeType: 'application/json' }
   });
-
-  const jsonResponse = JSON.parse(response.text);
+  const jsonResponse = JSON.parse((response as any).text);
   return {
     adjustments: {
       brightness: jsonResponse.brightness,
@@ -57,36 +65,24 @@ export const getAIAutoAdjustments = async (photoName: string): Promise<AIAdjustm
 type AIDescriptionSuggestion = { suggestedDescription: string; enhancementNotes: string; };
 
 export const getAIDescription = async (photoName: string, currentDescription: string): Promise<AIDescriptionSuggestion> => {
-  if (!process.env.API_KEY) {
-    console.warn("API_KEY not set. Returning mock description data.");
+  const gem = await getGeminiClient();
+  if (!gem) {
     return new Promise(resolve => setTimeout(() => resolve({
-      suggestedDescription: "A breathtaking view of sun-drenched mountain peaks under a clear blue sky, evoking a sense of majesty and wonder.",
-      enhancementNotes: "Generated a more evocative and descriptive caption for the photo."
+      suggestedDescription: 'A sunlit mountain vista under a clear blue sky.',
+      enhancementNotes: 'Mock: Shortened and made more evocative.'
     }), MOCK_DELAY));
   }
-  
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const textPart = {
-    text: `The photo is named "${photoName}" and its current description is "${currentDescription}". Generate a new, compelling, and SEO-friendly one-sentence description. Provide a note about what you changed.`
-  };
 
-  const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
-    contents: { parts: [textPart] },
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          suggestedDescription: { type: Type.STRING, description: "The new compelling description." },
-          enhancementNotes: { type: Type.STRING, description: "A note on why this description is better." }
-        },
-        required: ["suggestedDescription", "enhancementNotes"]
-      }
-    }
+  const { client } = gem;
+  const prompt = {
+    text: `Return JSON with keys suggestedDescription and enhancementNotes for a new one-sentence, SEO-friendly description. Name: "${photoName}". Current: "${currentDescription}".`
+  };
+  const response = await client.models.generateContent({
+    model: 'gemini-2.5-flash',
+    contents: { parts: [prompt] },
+    config: { responseMimeType: 'application/json' }
   });
-  
-  return JSON.parse(response.text) as AIDescriptionSuggestion;
+  return JSON.parse((response as any).text) as AIDescriptionSuggestion;
 };
 
 
@@ -94,38 +90,25 @@ export const getAIDescription = async (photoName: string, currentDescription: st
 type AICreditsSuggestion = { author: string; copyright: string; enhancementNotes: string; };
 
 export const getAICredits = async (photoName: string, currentDescription: string): Promise<AICreditsSuggestion> => {
-    if (!process.env.API_KEY) {
-    console.warn("API_KEY not set. Returning mock credits data.");
+  const gem = await getGeminiClient();
+  if (!gem) {
     return new Promise(resolve => setTimeout(() => resolve({
-      author: "Demo User",
+      author: 'Demo User',
       copyright: `© ${new Date().getFullYear()} Demo User. All rights reserved.`,
-      enhancementNotes: "Generated author and copyright notice based on user data, assuming ownership."
+      enhancementNotes: 'Mock: Assumed ownership for demo.'
     }), MOCK_DELAY));
   }
-  
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const textPart = {
-    text: `Analyze the photo's filename "${photoName}" and description "${currentDescription}". Generate a suitable Author/Credit and a Copyright string. If a name is mentioned, use it. If not, suggest a placeholder "Photographer Name". For copyright, suggest a format like "© ${new Date().getFullYear()} Photographer Name. All rights reserved.". Provide a note on your findings.`
-  };
 
-  const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
-    contents: { parts: [textPart] },
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          author: { type: Type.STRING, description: "The name of the author or a placeholder." },
-          copyright: { type: Type.STRING, description: "The copyright notice." },
-          enhancementNotes: { type: Type.STRING, description: "A note on how the credits were generated." }
-        },
-        required: ["author", "copyright", "enhancementNotes"]
-      }
-    }
+  const { client } = gem;
+  const prompt = {
+    text: `Return JSON with keys author, copyright, enhancementNotes based on filename "${photoName}" and description "${currentDescription}".`
+  };
+  const response = await client.models.generateContent({
+    model: 'gemini-2.5-flash',
+    contents: { parts: [prompt] },
+    config: { responseMimeType: 'application/json' }
   });
-  
-  return JSON.parse(response.text) as AICreditsSuggestion;
+  return JSON.parse((response as any).text) as AICreditsSuggestion;
 };
 
 
@@ -133,40 +116,25 @@ export const getAICredits = async (photoName: string, currentDescription: string
 type AIOptimizationSuggestion = Omit<AIEnhancementSuggestion, "suggestedDescription">;
 
 export const getAIOptimization = async (photoName: string, originalFileSize: number): Promise<AIOptimizationSuggestion> => {
-  if (!process.env.API_KEY) {
-    console.warn("API_KEY not set. Returning mock optimization data.");
+  const gem = await getGeminiClient();
+  if (!gem) {
     return new Promise(resolve => setTimeout(() => resolve({
       suggestedFileName: `web-optimized-${photoName.toLowerCase().replace(/\s+/g, '-')}.jpg`,
       suggestedWidth: 1920,
       suggestedHeight: 1080,
       suggestedFileSize: Math.round(originalFileSize * 0.4),
-      enhancementNotes: "Suggested a web-friendly filename and standard 1080p resolution for optimal loading and quality."
+      enhancementNotes: 'Mock: Standard 1080p and filename normalization for web.'
     }), MOCK_DELAY));
   }
 
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const textPart = {
-    text: `Analyze a photo named "${photoName}" for web optimization. Suggest a new SEO-friendly filename, a standard web resolution (like 1920x1080), an estimated optimized file size in bytes (original is ${originalFileSize} bytes), and a brief note on the choices made.`
+  const { client } = gem;
+  const prompt = {
+    text: `Return JSON with keys suggestedFileName, suggestedWidth, suggestedHeight, suggestedFileSize, enhancementNotes for optimizing "${photoName}" (original size ${originalFileSize} bytes).`
   };
-
-  const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
-    contents: { parts: [textPart] },
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          suggestedFileName: { type: Type.STRING, description: "A SEO-friendly file name." },
-          suggestedWidth: { type: Type.INTEGER, description: "Suggested width in pixels." },
-          suggestedHeight: { type: Type.INTEGER, description: "Suggested height in pixels." },
-          suggestedFileSize: { type: Type.INTEGER, description: "Estimated optimized file size in bytes." },
-          enhancementNotes: { type: Type.STRING, description: "Summary of optimization choices." }
-        },
-        required: ["suggestedFileName", "suggestedWidth", "suggestedHeight", "suggestedFileSize", "enhancementNotes"]
-      }
-    }
+  const response = await client.models.generateContent({
+    model: 'gemini-2.5-flash',
+    contents: { parts: [prompt] },
+    config: { responseMimeType: 'application/json' }
   });
-  
-  return JSON.parse(response.text) as AIOptimizationSuggestion;
+  return JSON.parse((response as any).text) as AIOptimizationSuggestion;
 };
