@@ -19,7 +19,7 @@
 <script src="https://apis.google.com/js/api.js" async defer></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
   <!-- No importmap needed; Vite bundles dependencies for production. -->
-  <script type="module" crossorigin src="./assets/index-BkVwZ50G.js"></script>
+  <script type="module" crossorigin src="./assets/index-DoXoZoER.js"></script>
 </head>
   <body>
     <script>
@@ -35,6 +35,29 @@
             setTimeout(function(){ if(el&&el.parentNode) el.parentNode.removeChild(el)}, 6000);
           });
         } catch(e) {}
+      })();
+    </script>
+    <script>
+      // Preflight config.json check (independent of app bundle)
+      (function(){
+        var box=document.createElement('div');
+        box.style.cssText='position:fixed;z-index:99997;top:8px;right:8px;background:#111;color:#fff;font:11px monospace;padding:4px 6px;border-radius:4px;opacity:.85;max-width:50vw;';
+        box.textContent='cfg: checking...';
+        document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(box); });
+        function set(t){ try{ box.textContent=t; setTimeout(function(){ if(box&&box.parentNode) box.parentNode.removeChild(box)}, 8000);}catch(e){} }
+        var urls=[new URL('./config.json', location.href).toString(), location.origin + '/tools/google-drive-photo-enhancer/config.json'];
+        (async function(){
+          for (var i=0;i<urls.length;i++){
+            try {
+              var u=urls[i];
+              var r=await fetch(u,{cache:'no-store'});
+              var j=null; try{ j=await r.json(); }catch(_e){}
+              var ok=r.ok && j && (j.clientId||j.clientID);
+              if(ok){ set('cfg: ok @'+(i+1)+' hasClientId:true'); return; }
+            } catch(e){}
+          }
+          set('cfg: missing clientId or fetch failed');
+        })();
       })();
     </script>
     <div id="root"></div>
