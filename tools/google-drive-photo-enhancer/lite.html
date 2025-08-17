@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GDrive Photo Enhancer — Lite</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
+  <style>
+    :root { --bg:#0f1115; --fg:#eaeaea; --muted:#9aa0a6; --accent:#d08f2e }
+    html,body{height:100%}
+    body{margin:0;color:var(--fg);background:radial-gradient(60% 60% at 50% 40%, #191b22 0%, var(--bg) 60%);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial}
+    .wrap{max-width:980px;margin:6vh auto;padding:0 18px}
+    .card{background:#12151d;border:1px solid #222633;border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.35);padding:18px}
+    .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:10px 0}
+    label{color:#c9ced6}
+    input[type="url"],input[type="text"]{flex:1;min-width:240px;padding:.6rem .7rem;background:#0f1522;border:1px solid #2a3040;border-radius:10px;color:#eaeaea}
+    .btn{padding:.55rem .9rem;border:1px solid #2a3040;border-radius:10px;background:#1f2937;color:#eaeaea;cursor:pointer}
+    .btn:disabled{opacity:.6;cursor:wait}
+    .pill{display:inline-block;padding:.3rem .6rem;border:1px solid #2a3040;border-radius:999px;color:#c9ced6;font-size:.85rem}
+    .grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));margin-top:14px}
+    .tile{background:#0f1522;border:1px solid #2a3040;border-radius:12px;overflow:hidden}
+    .tile img{display:block;width:100%;height:140px;object-fit:cover}
+    .tile .meta{padding:8px 10px;font-size:.9rem;color:#c9ced6}
+    code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.9rem}
+    .muted{color:#9aa0a6}
+    .accent{color:var(--accent)}
+  </style>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+  <main class="wrap">
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <div class="row" style="gap:12px">
+          <img src="/assets/logo.svg" alt="happyk.au" height="36" />
+          <div class="pill">Lite</div>
+        </div>
+        <div id="status" class="muted">init</div>
+      </div>
+
+      <div class="row">
+        <div>Config URL:</div>
+        <code id="cfgUrl"></code>
+      </div>
+      <div class="row">
+        <div>Resolved clientId:</div>
+        <code id="cid">(loading)</code>
+      </div>
+
+      <div class="row" style="margin-top:12px">
+        <button id="signin" class="btn" disabled>Sign in with Google</button>
+        <div id="who" class="muted"></div>
+      </div>
+
+      <div class="row" style="margin-top:10px">
+        <label for="folder">Drive folder URL or ID:</label>
+        <input id="folder" type="text" placeholder="https://drive.google.com/drive/folders/… or ID" />
+        <button id="load" class="btn" disabled>Load photos</button>
+      </div>
+
+      <div id="err" style="margin-top:10px;color:#ffb3b3"></div>
+      <div id="grid" class="grid"></div>
+    </div>
+  </main>
+
+  <script>
+    (function(){
+      const $ = (id)=>document.getElementById(id);
+      const cfgUrl = location.origin + '/tools/google-drive-photo-enhancer/config.json';
+      $('cfgUrl').textContent = cfgUrl;
+      const state = { token: null };
+      function setStatus(t){ $('status').textContent = t; }
+      function setErr(t){ $('err').textContent = t||''; }
+      function parseFolderId(text){
+        if(!text) return null;
+        const m = text.match(/(?:\/folders\/|id=)([a-zA-Z0-9_-]+)/);
+        return m? m[1] : (text.length>20? text.trim() : null);
+      }
+      function imgTile(file){
+        const div = document.createElement('div');
+        div.className='tile';
+        const src = (file.thumbnailLink||'').replace(/=s\d+(-c)?$/, '=s1600');
+        div.innerHTML = '<img alt="" src="'+(src||'')+'"/><div class="meta">'+(file.name||'')+'</div>';
+        return div;
+      }
+      async function driveList(folderId){
+        const url = new URL('https://www.googleapis.com/drive/v3/files');
+        const q = `'${folderId}' in parents and (mimeType='image/jpeg' or mimeType='image/png' or mimeType='image/gif' or mimeType='image/webp') and trashed=false`;
+        url.searchParams.set('q', q);
+        url.searchParams.set('fields', 'files(id,name,thumbnailLink,webViewLink,imageMediaMetadata(width,height),size)');
+        url.searchParams.set('pageSize', '100');
+        const r = await fetch(url.toString(), { headers:{ Authorization:'Bearer '+state.token } });
+        if(!r.ok){ throw new Error('Drive list failed: HTTP '+r.status); }
+        const data = await r.json();
+        return Array.isArray(data.files)? data.files : [];
+      }
+      async function init(){
+        try {
+          setStatus('loading config');
+          const r = await fetch(cfgUrl,{cache:'no-store'});
+          const cfg = await r.json();
+          const clientId = cfg.clientId || cfg.clientID || cfg.CLIENT_ID || cfg.googleClientId || cfg.google_client_id;
+          $('cid').textContent = clientId || '(missing)';
+          if(!clientId){ setStatus('clientId missing'); return; }
+          setStatus('waiting GIS');
+          let tries=0; const waitGoogle = ()=> new Promise((res,rej)=>{
+            const id=setInterval(()=>{ if(window.google){clearInterval(id);res(window.google);} if(++tries>50){clearInterval(id);rej(new Error('timeout google')); } },200);
+          });
+          const google = await waitGoogle();
+          const tokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: clientId,
+            scope: 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email',
+            callback: async (t)=>{
+              if(t && t.access_token){
+                state.token = t.access_token;
+                setStatus('signed in');
+                $('load').disabled = false;
+                try{
+                  const u = await fetch('https://www.googleapis.com/oauth2/v3/userinfo',{ headers:{ Authorization:'Bearer '+state.token }});
+                  const info = await u.json();
+                  $('who').textContent = info.email? ('Signed in as '+info.email) : '';
+                }catch(e){ $('who').textContent=''; }
+              }
+            },
+            error_callback: (e)=>{ setErr('Sign-in failed'); }
+          });
+          $('signin').disabled = false;
+          $('signin').onclick = ()=> tokenClient.requestAccessToken();
+          $('load').onclick = async ()=>{
+            try{
+              setErr('');
+              $('grid').innerHTML='';
+              const id = parseFolderId($('folder').value);
+              if(!id){ setErr('Please paste a valid folder URL or ID.'); return; }
+              setStatus('loading photos…');
+              const files = await driveList(id);
+              const grid = $('grid');
+              if(files.length===0){ grid.innerHTML='<div class="muted">No images found.</div>'; }
+              else files.forEach(f=> grid.appendChild(imgTile(f)) );
+              setStatus('ready');
+            }catch(e){ setErr(e.message||'Failed to load'); setStatus('error'); }
+          };
+          setStatus('ready');
+        } catch(e){ setErr('Init error: '+(e.message||e)); setStatus('error'); }
+      }
+      init();
+    })();
+  </script>
+</body>
+</html>
+
