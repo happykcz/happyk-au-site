@@ -91,6 +91,11 @@ const App: React.FC = () => {
   
   useEffect(() => {
     const initGoogleClients = async () => {
+      console.info('[GDriveEnhancer] init start', {
+        href: window.location.href,
+        origin: window.location.origin,
+        pathname: window.location.pathname
+      });
       // Helper to ensure a script is loaded by polling for the global object
       const waitForScript = <T,>(globalName: 'gapi' | 'google'): Promise<T> => {
         return new Promise((resolve, reject) => {
@@ -98,12 +103,15 @@ const App: React.FC = () => {
           const interval = setInterval(() => {
             if (window[globalName]) {
               clearInterval(interval);
+              console.info(`[GDriveEnhancer] ${globalName} loaded`);
               resolve(window[globalName] as T);
             }
             retries++;
             if (retries > 50) { // ~10 seconds timeout
               clearInterval(interval);
-              reject(new Error(`Timed out waiting for ${globalName} to load.`));
+              const err = new Error(`Timed out waiting for ${globalName} to load.`);
+              console.error('[GDriveEnhancer] script load timeout', globalName, err);
+              reject(err);
             }
           }, 200);
         });
@@ -113,14 +121,17 @@ const App: React.FC = () => {
         // 1) Load runtime config
         let runtimeCfg: AppConfig | null = null;
         try {
-          const res = await fetch('./config.json', { cache: 'no-store' });
-          if (!res.ok) throw new Error('Missing config.json. Please create one (see README).');
+          const cfgUrl = new URL('./config.json', window.location.href).toString();
+          console.info('[GDriveEnhancer] fetching config.json', { cfgUrl });
+          const res = await fetch(cfgUrl, { cache: 'no-store' });
+          console.info('[GDriveEnhancer] config.json response', { status: res.status, ok: res.ok, contentType: res.headers.get('content-type') });
+          if (!res.ok) throw new Error(`Missing or inaccessible config.json (status ${res.status}).`);
           runtimeCfg = await res.json();
+          console.info('[GDriveEnhancer] config.json parsed', { hasClientId: !!runtimeCfg?.clientId, googleApiKey: !!(runtimeCfg as any)?.googleApiKey, geminiApiKey: !!(runtimeCfg as any)?.geminiApiKey });
           setConfig(runtimeCfg);
         } catch (cfgErr) {
-          throw new Error(
-            (cfgErr as Error).message || 'Could not load config.json. Create it with your Google OAuth Client ID.'
-          );
+          console.warn('[GDriveEnhancer] config.json load failed, will try fallbacks', cfgErr);
+          runtimeCfg = null; // continue to fallbacks
         }
 
         // Fallbacks: inline script config or URL param for quick testing
@@ -132,6 +143,7 @@ const App: React.FC = () => {
               if (parsed && parsed.clientId) {
                 runtimeCfg = { clientId: parsed.clientId, googleApiKey: parsed.googleApiKey };
                 setConfig(runtimeCfg);
+                console.info('[GDriveEnhancer] using inline #app-config clientId');
               }
             }
           } catch (e) {
@@ -143,6 +155,7 @@ const App: React.FC = () => {
           if (fromQuery) {
             runtimeCfg = { clientId: fromQuery };
             setConfig(runtimeCfg);
+            console.info('[GDriveEnhancer] using client_id from query string');
           }
         }
 
@@ -152,7 +165,7 @@ const App: React.FC = () => {
           waitForScript<any>('google')
         ]);
         
-        await new Promise<void>((resolve, reject) => gapi.load('client', { callback: resolve, onerror: reject }));
+        await new Promise<void>((resolve, reject) => gapi.load('client', { callback: resolve, onerror: (e: any) => { console.error('[GDriveEnhancer] gapi.load error', e); reject(e); } }));
 
         await gapi.client.init({
           // Optional: API key only needed for some unauthenticated calls; OAuth token is primary.
@@ -163,6 +176,7 @@ const App: React.FC = () => {
         });
         
         if (!runtimeCfg?.clientId) {
+          console.error('[GDriveEnhancer] No clientId after all fallbacks');
           throw new Error('Google Client ID is missing. Place it in config.json (clientId), inline #app-config, or pass ?client_id=...');
         }
 
@@ -171,6 +185,7 @@ const App: React.FC = () => {
           scope: 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email',
           callback: async (tokenResponse: any) => {
             if (tokenResponse && tokenResponse.access_token) {
+              console.info('[GDriveEnhancer] received access token');
               gapi.client.setToken(tokenResponse);
               try {
                 // Use OpenID userinfo endpoint instead of People API to avoid extra API enablement.
@@ -179,6 +194,7 @@ const App: React.FC = () => {
                 });
                 if (!res.ok) throw new Error('Failed to fetch user profile');
                 const info = await res.json();
+                console.info('[GDriveEnhancer] userinfo loaded', { email: info?.email, name: info?.name });
                 setUser({
                   name: info.name || info.given_name || 'User',
                   email: info.email || '',
@@ -198,6 +214,7 @@ const App: React.FC = () => {
         });
         setTokenClient(client);
         setIsGisLoaded(true);
+        console.info('[GDriveEnhancer] token client initialized');
       } catch (err: any) {
         console.error('Error during Google services initialization:', err);
         const message = parseGoogleApiError(err);
