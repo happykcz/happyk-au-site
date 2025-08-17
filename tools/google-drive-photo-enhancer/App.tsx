@@ -67,6 +67,7 @@ type AppConfig = {
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [tokenClient, setTokenClient] = useState<any>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
   const [isGisLoaded, setIsGisLoaded] = useState(false);
   const [config, setConfig] = useState<AppConfig | null>(null);
   const [resolvedClientId, setResolvedClientId] = useState<string | null>(null);
@@ -106,14 +107,15 @@ const App: React.FC = () => {
     setIsLoadingPhotos(true);
     setError(null);
     try {
-      const result = await listPhotosInFolder(id);
+      if (!accessToken) throw new Error('Not authenticated.');
+      const result = await listPhotosInFolder(id, accessToken);
       setPhotos(result);
     } catch (err: any) {
       setError(err.message || 'Failed to load photos. Check folder permissions and URL.');
     } finally {
       setIsLoadingPhotos(false);
     }
-  }, []);
+  }, [accessToken]);
   
   useEffect(() => {
     const initGoogleClients = async () => {
@@ -125,7 +127,7 @@ const App: React.FC = () => {
       });
       dbg.line('init start', { href: window.location.href });
       // Helper to ensure a script is loaded by polling for the global object
-      const waitForScript = <T,>(globalName: 'gapi' | 'google'): Promise<T> => {
+      const waitForScript = <T,>(globalName: 'google'): Promise<T> => {
         return new Promise((resolve, reject) => {
           let retries = 0;
           const interval = setInterval(() => {
@@ -207,21 +209,8 @@ const App: React.FC = () => {
           }
         }
 
-        // 2) Load Google scripts
-        const [gapi, google] = await Promise.all([
-          waitForScript<any>('gapi'), 
-          waitForScript<any>('google')
-        ]);
-        
-        await new Promise<void>((resolve, reject) => gapi.load('client', { callback: resolve, onerror: (e: any) => { console.error('[GDriveEnhancer] gapi.load error', e); dbg.line('gapi.load error'); reject(e); } }));
-
-        await gapi.client.init({
-          // Optional: API key only needed for some unauthenticated calls; OAuth token is primary.
-          apiKey: runtimeCfg?.googleApiKey,
-          discoveryDocs: [
-            'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'
-          ],
-        });
+        // 2) Load Google Identity script only (no gapi client needed)
+        const google = await waitForScript<any>('google');
         
         if (!runtimeCfg?.clientId) {
           console.error('[GDriveEnhancer] No clientId after all fallbacks');
@@ -238,7 +227,7 @@ const App: React.FC = () => {
           callback: async (tokenResponse: any) => {
             if (tokenResponse && tokenResponse.access_token) {
               console.info('[GDriveEnhancer] received access token');
-              gapi.client.setToken(tokenResponse);
+              setAccessToken(tokenResponse.access_token);
               try {
                 // Use OpenID userinfo endpoint instead of People API to avoid extra API enablement.
                 const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
@@ -288,23 +277,24 @@ const App: React.FC = () => {
   };
 
   const handleLogout = () => {
-      const token = gapi.client.getToken();
-      if (token !== null) {
-          google.accounts.oauth2.revoke(token.access_token, () => {
-            gapi.client.setToken(null);
+      try {
+        if (accessToken) {
+          google.accounts.oauth2.revoke(accessToken, () => {
+            setAccessToken(null);
             setUser(null);
             setFolderId('');
             setPhotos([]);
             setError(null);
           });
-      }
+        }
+      } catch {}
   };
   
   useEffect(() => {
-    if (folderId) {
+    if (folderId && accessToken) {
       fetchPhotos(folderId);
     }
-  }, [folderId, fetchPhotos]);
+  }, [folderId, accessToken, fetchPhotos]);
   
   const parseFolderIdFromUrl = (url: string): string | null => {
     const regex = /(?:\/folders\/|id=)([a-zA-Z0-9_-]+)/;
