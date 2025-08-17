@@ -5,6 +5,7 @@
     <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Google Drive Photo Enhancer</title>
+    <!-- GPE BUILD MARKER: will be updated on build -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
       body {
@@ -18,9 +19,24 @@
 <script src="https://apis.google.com/js/api.js" async defer></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
   <!-- No importmap needed; Vite bundles dependencies for production. -->
-  <script type="module" crossorigin src="./assets/index-dExlFFCf.js"></script>
+  <script type="module" crossorigin src="./assets/index-BkVwZ50G.js"></script>
 </head>
   <body>
+    <script>
+      // Early boot banner to verify latest index.html is deployed
+      (function(){
+        try {
+          var el=document.createElement('div');
+          el.id='gpe-boot';
+          el.style.cssText='position:fixed;z-index:99998;top:8px;left:8px;background:#111;color:#fff;font:11px monospace;padding:4px 6px;border-radius:4px;opacity:.8';
+          el.textContent='GPE boot: '+(new Date()).toISOString();
+          document.addEventListener('DOMContentLoaded', function(){
+            document.body.appendChild(el);
+            setTimeout(function(){ if(el&&el.parentNode) el.parentNode.removeChild(el)}, 6000);
+          });
+        } catch(e) {}
+      })();
+    </script>
     <div id="root"></div>
     <!-- Optional inline config fallback (use for local testing only)
     <script id="app-config" type="application/json">{

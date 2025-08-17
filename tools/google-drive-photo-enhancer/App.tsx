@@ -148,17 +148,27 @@ const App: React.FC = () => {
         // 1) Load runtime config
         let runtimeCfg: AppConfig | null = null;
         try {
-          const cfgUrl = new URL('./config.json', window.location.href).toString();
-          console.info('[GDriveEnhancer] fetching config.json', { cfgUrl });
-          dbg.line('fetching config.json', { cfgUrl });
-          const res = await fetch(cfgUrl, { cache: 'no-store' });
-          console.info('[GDriveEnhancer] config.json response', { status: res.status, ok: res.ok, contentType: res.headers.get('content-type') });
-          dbg.line('config.json response', { status: res.status, ok: res.ok, type: res.headers.get('content-type') });
-          if (!res.ok) throw new Error(`Missing or inaccessible config.json (status ${res.status}).`);
-          runtimeCfg = await res.json();
-          console.info('[GDriveEnhancer] config.json parsed', { hasClientId: !!runtimeCfg?.clientId, googleApiKey: !!(runtimeCfg as any)?.googleApiKey, geminiApiKey: !!(runtimeCfg as any)?.geminiApiKey });
-          dbg.line('config.json parsed', { hasClientId: !!runtimeCfg?.clientId });
-          setConfig(runtimeCfg);
+          const candidates = [
+            new URL('./config.json', window.location.href).toString(),
+            `${window.location.origin}/tools/google-drive-photo-enhancer/config.json`
+          ];
+          for (const cfgUrl of candidates) {
+            console.info('[GDriveEnhancer] fetching config.json', { cfgUrl });
+            dbg.line('fetching config.json', { cfgUrl });
+            try {
+              const res = await fetch(cfgUrl, { cache: 'no-store' });
+              console.info('[GDriveEnhancer] config.json response', { status: res.status, ok: res.ok, contentType: res.headers.get('content-type') });
+              dbg.line('config.json response', { status: res.status, ok: res.ok, type: res.headers.get('content-type') });
+              if (!res.ok) throw new Error(`HTTP ${res.status}`);
+              runtimeCfg = await res.json();
+              console.info('[GDriveEnhancer] config.json parsed', { hasClientId: !!runtimeCfg?.clientId, googleApiKey: !!(runtimeCfg as any)?.googleApiKey, geminiApiKey: !!(runtimeCfg as any)?.geminiApiKey });
+              dbg.line('config.json parsed', { hasClientId: !!runtimeCfg?.clientId });
+              setConfig(runtimeCfg);
+              break;
+            } catch (e) {
+              console.warn('[GDriveEnhancer] config fetch failed for candidate', cfgUrl, e);
+            }
+          }
         } catch (cfgErr) {
           console.warn('[GDriveEnhancer] config.json load failed, will try fallbacks', cfgErr);
           dbg.line('config.json load failed; trying fallbacks');
@@ -214,6 +224,7 @@ const App: React.FC = () => {
           throw new Error('Google Client ID is missing. Place it in config.json (clientId), inline #app-config, or pass ?client_id=...');
         }
 
+        dbg.line('resolved clientId', { clientId: runtimeCfg.clientId });
         const client = google.accounts.oauth2.initTokenClient({
           client_id: runtimeCfg.clientId,
           scope: 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email',
