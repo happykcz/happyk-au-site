@@ -19,7 +19,7 @@
 <script src="https://apis.google.com/js/api.js" async defer></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
   <!-- No importmap needed; Vite bundles dependencies for production. -->
-  <script type="module" crossorigin src="./assets/index-D07KO0za.js?v=1755401870357"></script>
+  <script type="module" crossorigin src="./assets/index-Bsg7YPWT.js?v=1755402825241"></script>
 </head>
   <body>
     <script>
@@ -58,6 +58,40 @@
           }
           set('cfg: missing clientId or fetch failed');
         })();
+      })();
+    </script>
+    <script>
+      // Shim fetch for config.json to guarantee clientId shape for legacy bundles
+      (function(){
+        var origFetch = window.fetch.bind(window);
+        var banner;
+        function show(text){
+          try{
+            if(!banner){
+              banner=document.createElement('div');
+              banner.style.cssText='position:fixed;z-index:99996;top:40px;left:8px;background:#0b3d0b;color:#eaffea;font:11px monospace;padding:4px 6px;border-radius:4px;opacity:.9;max-width:90vw;';
+              document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(banner); });
+            }
+            banner.textContent = text;
+          }catch(e){}
+        }
+        window.fetch = async function(input, init){
+          try{
+            var url = (typeof input === 'string') ? input : (input && input.url);
+            if(url && /(^|\/)config\.json(\?|$)/.test(url)){
+              var abs = location.origin + '/tools/google-drive-photo-enhancer/config.json';
+              var res = await origFetch(abs, Object.assign({}, init||{}, { cache: 'no-store' }));
+              var txt = await res.text();
+              var obj = {};
+              try{ obj = JSON.parse(txt); }catch(e){}
+              var cid = obj && (obj.clientId || obj.clientID || obj.CLIENT_ID || obj.googleClientId || obj.google_client_id);
+              if(cid && !obj.clientId){ obj.clientId = cid; }
+              show('shim: clientId=' + (obj.clientId||'(missing)'));
+              return new Response(JSON.stringify(obj||{}), { status: 200, headers: { 'Content-Type': 'application/json' } });
+            }
+          }catch(e){}
+          return origFetch(input, init);
+        };
       })();
     </script>
     <div id="root"></div>
