@@ -76,6 +76,30 @@ const App: React.FC = () => {
   const [folderId, setFolderId] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
 
+  // Lightweight debug banner for field diagnostics
+  const dbg = {
+    el: null as HTMLDivElement | null,
+    ensure() {
+      if (this.el) return this.el;
+      const el = document.createElement('div');
+      el.id = 'gpe-debug';
+      el.style.cssText = 'position:fixed;z-index:99999;bottom:10px;left:10px;max-width:90vw;max-height:45vh;overflow:auto;background:rgba(0,0,0,.8);color:#fff;font:12px/1.4 monospace;padding:8px 10px;border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.4)';
+      el.innerHTML = '<div style="opacity:.8;margin-bottom:6px">GDrive Enhancer Debug</div>';
+      document.body.appendChild(el);
+      this.el = el;
+      return el;
+    },
+    line(msg: string, data?: any) {
+      try {
+        const el = this.ensure();
+        const pre = document.createElement('pre');
+        pre.style.margin = '0';
+        pre.textContent = data ? `${msg} ${JSON.stringify(data)}` : msg;
+        el.appendChild(pre);
+      } catch {}
+    }
+  };
+
   const fetchPhotos = useCallback(async (id: string) => {
     setIsLoadingPhotos(true);
     setError(null);
@@ -96,6 +120,7 @@ const App: React.FC = () => {
         origin: window.location.origin,
         pathname: window.location.pathname
       });
+      dbg.line('init start', { href: window.location.href });
       // Helper to ensure a script is loaded by polling for the global object
       const waitForScript = <T,>(globalName: 'gapi' | 'google'): Promise<T> => {
         return new Promise((resolve, reject) => {
@@ -104,6 +129,7 @@ const App: React.FC = () => {
             if (window[globalName]) {
               clearInterval(interval);
               console.info(`[GDriveEnhancer] ${globalName} loaded`);
+              dbg.line(`${globalName} loaded`);
               resolve(window[globalName] as T);
             }
             retries++;
@@ -111,6 +137,7 @@ const App: React.FC = () => {
               clearInterval(interval);
               const err = new Error(`Timed out waiting for ${globalName} to load.`);
               console.error('[GDriveEnhancer] script load timeout', globalName, err);
+              dbg.line('script load timeout', { globalName });
               reject(err);
             }
           }, 200);
@@ -123,14 +150,18 @@ const App: React.FC = () => {
         try {
           const cfgUrl = new URL('./config.json', window.location.href).toString();
           console.info('[GDriveEnhancer] fetching config.json', { cfgUrl });
+          dbg.line('fetching config.json', { cfgUrl });
           const res = await fetch(cfgUrl, { cache: 'no-store' });
           console.info('[GDriveEnhancer] config.json response', { status: res.status, ok: res.ok, contentType: res.headers.get('content-type') });
+          dbg.line('config.json response', { status: res.status, ok: res.ok, type: res.headers.get('content-type') });
           if (!res.ok) throw new Error(`Missing or inaccessible config.json (status ${res.status}).`);
           runtimeCfg = await res.json();
           console.info('[GDriveEnhancer] config.json parsed', { hasClientId: !!runtimeCfg?.clientId, googleApiKey: !!(runtimeCfg as any)?.googleApiKey, geminiApiKey: !!(runtimeCfg as any)?.geminiApiKey });
+          dbg.line('config.json parsed', { hasClientId: !!runtimeCfg?.clientId });
           setConfig(runtimeCfg);
         } catch (cfgErr) {
           console.warn('[GDriveEnhancer] config.json load failed, will try fallbacks', cfgErr);
+          dbg.line('config.json load failed; trying fallbacks');
           runtimeCfg = null; // continue to fallbacks
         }
 
@@ -144,6 +175,7 @@ const App: React.FC = () => {
                 runtimeCfg = { clientId: parsed.clientId, googleApiKey: parsed.googleApiKey };
                 setConfig(runtimeCfg);
                 console.info('[GDriveEnhancer] using inline #app-config clientId');
+                dbg.line('using inline #app-config clientId');
               }
             }
           } catch (e) {
@@ -156,6 +188,7 @@ const App: React.FC = () => {
             runtimeCfg = { clientId: fromQuery };
             setConfig(runtimeCfg);
             console.info('[GDriveEnhancer] using client_id from query string');
+            dbg.line('using client_id from query string');
           }
         }
 
@@ -165,7 +198,7 @@ const App: React.FC = () => {
           waitForScript<any>('google')
         ]);
         
-        await new Promise<void>((resolve, reject) => gapi.load('client', { callback: resolve, onerror: (e: any) => { console.error('[GDriveEnhancer] gapi.load error', e); reject(e); } }));
+        await new Promise<void>((resolve, reject) => gapi.load('client', { callback: resolve, onerror: (e: any) => { console.error('[GDriveEnhancer] gapi.load error', e); dbg.line('gapi.load error'); reject(e); } }));
 
         await gapi.client.init({
           // Optional: API key only needed for some unauthenticated calls; OAuth token is primary.
@@ -177,6 +210,7 @@ const App: React.FC = () => {
         
         if (!runtimeCfg?.clientId) {
           console.error('[GDriveEnhancer] No clientId after all fallbacks');
+          dbg.line('No clientId after all fallbacks');
           throw new Error('Google Client ID is missing. Place it in config.json (clientId), inline #app-config, or pass ?client_id=...');
         }
 
@@ -215,8 +249,10 @@ const App: React.FC = () => {
         setTokenClient(client);
         setIsGisLoaded(true);
         console.info('[GDriveEnhancer] token client initialized');
+        dbg.line('token client initialized');
       } catch (err: any) {
         console.error('Error during Google services initialization:', err);
+        dbg.line('init error', { message: err?.message });
         const message = parseGoogleApiError(err);
         setError(message);
         setIsGisLoaded(false);
