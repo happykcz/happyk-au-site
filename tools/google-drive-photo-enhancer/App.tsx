@@ -115,6 +115,7 @@ const App: React.FC = () => {
   
   useEffect(() => {
     const initGoogleClients = async () => {
+      console.log('[GPE SENTINEL] App useEffect entered');
       console.info('[GDriveEnhancer] init start', {
         href: window.location.href,
         origin: window.location.origin,
