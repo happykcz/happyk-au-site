@@ -147,6 +147,11 @@ const App: React.FC = () => {
       try {
         // 1) Load runtime config
         let runtimeCfg: AppConfig | null = null;
+        const pickClientId = (obj: any): string | undefined => {
+          if (!obj) return undefined;
+          return obj.clientId || obj.clientID || obj.CLIENT_ID || obj.googleClientId || obj.google_client_id || undefined;
+        };
+        let clientIdSource: string | null = null;
         try {
           const candidates = [
             new URL('./config.json', window.location.href).toString(),
@@ -160,10 +165,13 @@ const App: React.FC = () => {
               console.info('[GDriveEnhancer] config.json response', { status: res.status, ok: res.ok, contentType: res.headers.get('content-type') });
               dbg.line('config.json response', { status: res.status, ok: res.ok, type: res.headers.get('content-type') });
               if (!res.ok) throw new Error(`HTTP ${res.status}`);
-              runtimeCfg = await res.json();
-              console.info('[GDriveEnhancer] config.json parsed', { hasClientId: !!runtimeCfg?.clientId, googleApiKey: !!(runtimeCfg as any)?.googleApiKey, geminiApiKey: !!(runtimeCfg as any)?.geminiApiKey });
-              dbg.line('config.json parsed', { hasClientId: !!runtimeCfg?.clientId });
+              const raw = await res.json();
+              const cid = pickClientId(raw);
+              runtimeCfg = { clientId: cid as string, googleApiKey: raw.googleApiKey } as AppConfig;
+              console.info('[GDriveEnhancer] config.json parsed', { hasClientId: !!cid });
+              dbg.line('config.json parsed', { hasClientId: !!cid });
               setConfig(runtimeCfg);
+              clientIdSource = cfgUrl;
               break;
             } catch (e) {
               console.warn('[GDriveEnhancer] config fetch failed for candidate', cfgUrl, e);
@@ -181,11 +189,13 @@ const App: React.FC = () => {
             const inline = document.getElementById('app-config')?.textContent;
             if (inline) {
               const parsed = JSON.parse(inline);
-              if (parsed && parsed.clientId) {
-                runtimeCfg = { clientId: parsed.clientId, googleApiKey: parsed.googleApiKey };
+              const cid = pickClientId(parsed);
+              if (parsed && cid) {
+                runtimeCfg = { clientId: cid, googleApiKey: parsed.googleApiKey };
                 setConfig(runtimeCfg);
                 console.info('[GDriveEnhancer] using inline #app-config clientId');
                 dbg.line('using inline #app-config clientId');
+                clientIdSource = 'inline';
               }
             }
           } catch (e) {
@@ -199,6 +209,7 @@ const App: React.FC = () => {
             setConfig(runtimeCfg);
             console.info('[GDriveEnhancer] using client_id from query string');
             dbg.line('using client_id from query string');
+            clientIdSource = 'query';
           }
         }
 
@@ -224,7 +235,7 @@ const App: React.FC = () => {
           throw new Error('Google Client ID is missing. Place it in config.json (clientId), inline #app-config, or pass ?client_id=...');
         }
 
-        dbg.line('resolved clientId', { clientId: runtimeCfg.clientId });
+        dbg.line('resolved clientId', { clientId: runtimeCfg.clientId, source: clientIdSource });
         const client = google.accounts.oauth2.initTokenClient({
           client_id: runtimeCfg.clientId,
           scope: 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email',
