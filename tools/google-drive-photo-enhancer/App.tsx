@@ -69,6 +69,8 @@ const App: React.FC = () => {
   const [tokenClient, setTokenClient] = useState<any>(null);
   const [isGisLoaded, setIsGisLoaded] = useState(false);
   const [config, setConfig] = useState<AppConfig | null>(null);
+  const [resolvedClientId, setResolvedClientId] = useState<string | null>(null);
+  const [clientIdSource, setClientIdSource] = useState<string | null>(null);
   
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
@@ -154,30 +156,21 @@ const App: React.FC = () => {
         };
         let clientIdSource: string | null = null;
         try {
-          const candidates = [
-            new URL('./config.json', window.location.href).toString(),
-            `${window.location.origin}/tools/google-drive-photo-enhancer/config.json`
-          ];
-          for (const cfgUrl of candidates) {
-            console.info('[GDriveEnhancer] fetching config.json', { cfgUrl });
-            dbg.line('fetching config.json', { cfgUrl });
-            try {
-              const res = await fetch(cfgUrl, { cache: 'no-store' });
-              console.info('[GDriveEnhancer] config.json response', { status: res.status, ok: res.ok, contentType: res.headers.get('content-type') });
-              dbg.line('config.json response', { status: res.status, ok: res.ok, type: res.headers.get('content-type') });
-              if (!res.ok) throw new Error(`HTTP ${res.status}`);
-              const raw = await res.json();
-              const cid = pickClientId(raw);
-              runtimeCfg = { clientId: cid as string, googleApiKey: raw.googleApiKey } as AppConfig;
-              console.info('[GDriveEnhancer] config.json parsed', { hasClientId: !!cid });
-              dbg.line('config.json parsed', { hasClientId: !!cid });
-              setConfig(runtimeCfg);
-              clientIdSource = cfgUrl;
-              break;
-            } catch (e) {
-              console.warn('[GDriveEnhancer] config fetch failed for candidate', cfgUrl, e);
-            }
-          }
+          // Pin absolute path for GitHub Pages deployment
+          const cfgUrl = `${window.location.origin}/tools/google-drive-photo-enhancer/config.json`;
+          console.info('[GDriveEnhancer] fetching config.json', { cfgUrl });
+          dbg.line('fetching config.json', { cfgUrl });
+          const res = await fetch(cfgUrl, { cache: 'no-store' });
+          console.info('[GDriveEnhancer] config.json response', { status: res.status, ok: res.ok, contentType: res.headers.get('content-type') });
+          dbg.line('config.json response', { status: res.status, ok: res.ok, type: res.headers.get('content-type') });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const raw = await res.json();
+          const cid = pickClientId(raw);
+          runtimeCfg = { clientId: cid as string, googleApiKey: raw.googleApiKey } as AppConfig;
+          console.info('[GDriveEnhancer] config.json parsed', { hasClientId: !!cid });
+          dbg.line('config.json parsed', { hasClientId: !!cid });
+          setConfig(runtimeCfg);
+          clientIdSource = 'absolute';
         } catch (cfgErr) {
           console.warn('[GDriveEnhancer] config.json load failed, will try fallbacks', cfgErr);
           dbg.line('config.json load failed; trying fallbacks');
@@ -237,6 +230,8 @@ const App: React.FC = () => {
         }
 
         dbg.line('resolved clientId', { clientId: runtimeCfg.clientId, source: clientIdSource });
+        setResolvedClientId(runtimeCfg.clientId);
+        setClientIdSource(clientIdSource);
         const client = google.accounts.oauth2.initTokenClient({
           client_id: runtimeCfg.clientId,
           scope: 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email',
@@ -348,7 +343,7 @@ const App: React.FC = () => {
   };
   
   if (!user) {
-    return <LoginScreen onLogin={handleLogin} isGisLoaded={isGisLoaded} error={error} />;
+    return <LoginScreen onLogin={handleLogin} isGisLoaded={isGisLoaded} error={error} resolvedClientId={resolvedClientId} clientIdSource={clientIdSource} />;
   }
 
   if (!folderId) {
