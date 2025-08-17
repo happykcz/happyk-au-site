@@ -69,3 +69,33 @@ Prerequisites: Node.js 18+
 - Finalize Google API setup and add the production `config.json` to the deployed site.
 - Consider adding a simple serverless proxy for Gemini to enable real AI suggestions without exposing keys.
 - Optionally add minimal error telemetry to surface Drive permission or cookie issues.
+## Google Setup Checklist (OAuth + Drive)
+
+Follow these steps in Google Cloud Console to make sign-in and Drive listing work on a static site:
+
+1) OAuth consent screen
+- App type: External
+- Publishing status: In production (or Testing with your account listed as a Test user)
+- Scopes used by the app: add and save
+  - https://www.googleapis.com/auth/drive.readonly (Sensitive)
+  - https://www.googleapis.com/auth/userinfo.profile
+  - https://www.googleapis.com/auth/userinfo.email
+
+2) OAuth 2.0 Client ID (Web application)
+- Authorized JavaScript origins:
+  - https://happyk.au
+- Redirect URIs: not required for the token client flow
+
+3) Enable APIs
+- Enable “Google Drive API” in the same project.
+- People API is not required (the app uses /oauth2/v3/userinfo).
+
+4) Browser and network checks
+- Third-party cookies: some browsers’ strict modes may interfere with Google Identity. Test in a standard Chrome profile.
+- Ad/script blockers: ensure https://accounts.google.com and https://apis.google.com are not blocked.
+- If using Cloudflare: disable “Rocket Loader” and any feature that rewrites scripts for this path.
+
+5) Common errors and fixes
+- invalid_origin: add the exact origin to “Authorized JavaScript origins” (protocol + domain).
+- access blocked / needs verification: publish the consent screen to production or add yourself as a Test user.
+- popup closed by user: try again; ensure no browser extensions close popups.
