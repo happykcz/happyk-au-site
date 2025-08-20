@@ -1,0 +1,121 @@
+:root {
+  --bg: #0f1115;
+  --bg-soft: #12151d;
+  --border: #222633;
+  --fg: #eaeaea;
+  --muted: #9aa0a6;
+  --muted-2: #7f8691;
+  --accent: #d08f2e;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: radial-gradient(60% 60% at 50% 40%, #191b22 0%, var(--bg) 60%);
+  color: var(--fg);
+  font: 16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Layout */
+.wrap {
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 1rem;
+}
+
+.container {
+  max-width: 960px;
+  margin: 64px auto;
+  padding: 0 20px;
+}
+
+.card {
+  max-width: 960px;
+  width: 100%;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 2rem;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, .35);
+}
+
+/* Header */
+.site-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.site-header .logo { display: block; }
+
+/* Typography */
+h1 { font-size: clamp(1.8rem, 3vw, 2.2rem); margin: 0 0 .5rem; letter-spacing: .3px; }
+h2 { font-size: 1.25rem; margin: 0 0 .5rem; }
+p { color: var(--muted); margin: .25rem 0 .75rem; }
+.accent { color: var(--accent); }
+
+/* Links */
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* Footer */
+footer { margin-top: 1.25rem; font-size: .85rem; color: var(--muted-2); }
+
+/* Tools index tiles */
+.note { color: var(--muted); margin: 0 0 24px; }
+.grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.tool { border: 1px solid var(--border); background: var(--bg-soft); border-radius: 16px; padding: 16px; }
+.tool h2 { margin: 0 0 6px; font-size: 1.05rem; }
+.tool p { margin: 0; color: var(--muted); font-size: .95rem; }
+
+/* Form + UI primitives for dark theme */
+input, textarea, select {
+  background: #0e1119;
+  color: var(--fg);
+  border: 1px solid #2a3040;
+  border-radius: 12px;
+  padding: .65rem .8rem;
+  outline: none;
+}
+input::placeholder, textarea::placeholder { color: #8b93a0; }
+input:focus, textarea:focus, select:focus { border-color: #39425a; box-shadow: 0 0 0 3px rgba(208, 143, 46, 0.15); }
+
+button.btn {
+  background: linear-gradient(90deg, #d08f2e, #e0a34d);
+  color: #111;
+  border: none;
+  padding: .7rem 1rem;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+button.btn.secondary { background: #202636; color: #d6d9df; }
+button.btn:disabled { opacity: .6; cursor: not-allowed; }
+
+/* Utility to make light components match dark theme when embedded (e.g. Tailwind classes) */
+.as-card { background: var(--bg-soft); border: 1px solid var(--border); border-radius: 18px; }
+.muted { color: var(--muted); }
+
+/* Tailwind color utility overrides (best-effort) to fit theme when used by tools */
+.bg-white { background-color: var(--bg-soft) !important; }
+.bg-gray-50 { background-color: #10141f !important; }
+.bg-gray-100 { background-color: #161a24 !important; }
+.bg-gray-200 { background-color: #1b2130 !important; }
+.text-gray-600, .text-gray-700, .text-gray-800 { color: var(--fg) !important; opacity: .95; }
+.text-gray-500 { color: var(--muted) !important; }
+.border-gray-200, .border-gray-300 { border-color: var(--border) !important; }
+.shadow-2xl { box-shadow: 0 12px 40px rgba(0, 0, 0, .35) !important; }
+
+/* Tabs used in QR generator */
+.tab-active { color: var(--accent) !important; border-bottom: 2px solid var(--accent) !important; background-color: #161a24 !important; }
+.tab-inactive { color: var(--muted) !important; }
+.tab-inactive:hover { color: var(--fg) !important; background-color: #161a24 !important; }
+
+/* QR preview area helpers */
+.preview-surface { background: #0b0e15; border: 1px dashed #2a3040; border-radius: 16px; }

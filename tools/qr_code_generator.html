@@ -3,52 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Code Generator</title>
+    <title>QR Code Generator — happyk.au</title>
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+    <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+    <link rel="stylesheet" href="/assets/site.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .gradient-bg {
-            background: linear-gradient(135deg, #fdf2f8 0%, #eff6ff 50%, #eef2ff 100%);
-        }
-        .tab-active {
-            color: #7c3aed;
-            border-bottom: 2px solid #7c3aed;
-            background-color: #faf5ff;
-        }
-        .tab-inactive {
-            color: #6b7280;
-        }
-        .tab-inactive:hover {
-            color: #374151;
-            background-color: #f9fafb;
-        }
-        .gradient-text {
-            background: linear-gradient(to right, #7c3aed, #2563eb);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        .btn-primary {
-            background: linear-gradient(to right, #7c3aed, #2563eb);
-        }
-        .btn-primary:hover {
-            background: linear-gradient(to right, #6d28d9, #1d4ed8);
-        }
+      /* Minimal page tweaks; global theme in /assets/site.css */
+      .page-wrap { max-width: 1000px; margin: 48px auto; padding: 0 20px; }
+      .btn-primary { background: linear-gradient(90deg, var(--accent), #e0a34d); color: #111; }
+      .btn-primary:hover { filter: brightness(1.06); }
+      .gradient-text { color: var(--accent); background: none; -webkit-text-fill-color: unset; }
     </style>
 </head>
 <body>
-    <div class="min-h-screen gradient-bg p-4">
+    <div class="page-wrap">
         <div class="max-w-4xl mx-auto">
             <!-- Header -->
-            <div class="text-center mb-8">
-                <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl mb-4">
-                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 16h4.01M12 16h.01m0 0h4.01M12 20v.01"></path>
-                    </svg>
-                </div>
-                <h1 class="text-4xl font-bold gradient-text mb-2">QR Code Generator</h1>
-                <p class="text-gray-600 text-lg">Generate QR codes for URLs, text, and contact information</p>
+            <div class="site-header">
+              <a href="/tools/index.html" aria-label="Back to tools">
+                <img src="/assets/logo.svg" alt="happyk.au" class="logo" height="40">
+              </a>
+              <h1>QR Code Generator</h1>
             </div>
+            <p class="muted" style="margin-bottom:20px">Generate QR codes for URLs, text, and contact information.</p>
 
             <div class="bg-white rounded-3xl shadow-2xl overflow-hidden">
                 <!-- Tab Navigation -->
