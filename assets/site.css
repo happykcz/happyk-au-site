@@ -19,6 +19,13 @@ body {
   font: 16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, "Helvetica Neue", Arial, sans-serif;
 }
 
+footer {
+  text-align: center;
+  margin-top: 2rem;
+  font-size: .85rem;
+  color: var(--muted-2);
+}
+
 /* Layout */
 .wrap {
   min-height: 100%;
