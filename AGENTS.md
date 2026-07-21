@@ -36,3 +36,11 @@
 - Do not commit secrets. The Photo Enhancer expects `tools/google-drive-photo-enhancer/config.json` with `{ "clientId": "<google-oauth-client-id>" }`. Keep this file local or provision it in deployment.
 - OAuth scopes should remain minimal and match those in the code. Avoid modifying `CNAME` and `robots.txt` without coordination.
 
+## Agent skills
+
+Shared configuration for the engineering skills — mirrored from `CLAUDE.md`, which is authoritative.
+
+- **Issue tracker** — GitHub Issues via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+- **Triage labels** — default canonical vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+- **Domain docs** — single-context layout (`CONTEXT.md` + `docs/adr/` at repo root). See `docs/agents/domain.md`.
+

@@ -177,3 +177,17 @@ No formal test suite. Manual verification recommended:
 - OAuth Client ID is not a secret (must be public for browser OAuth)
 - Gemini API key is sensitive — keep mocked or use server proxy
 - Do not modify `CNAME` or `robots.txt` without coordination
+
+## Agent skills
+
+### Issue tracker
+
+Issues are tracked in GitHub Issues (via the `gh` CLI). See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default canonical label vocabulary (needs-triage, needs-info, ready-for-agent, ready-for-human, wontfix). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context layout (`CONTEXT.md` + `docs/adr/` at repo root). See `docs/agents/domain.md`.
